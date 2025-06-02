@@ -177,9 +177,14 @@ async def set_commands(app):
 
 async def main():
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+
+    app.job_queue = app.create_job_queue()
+    app.job_queue.start()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("weektasks", weektasks))
     app.add_handler(CallbackQueryHandler(mark_complete, pattern="^done:"))
+
     app.add_handler(ConversationHandler(
         entry_points=[CommandHandler('addtask', add_task)],
         states={
@@ -192,11 +197,14 @@ async def main():
         },
         fallbacks=[]
     ))
+
     for hr in range(7, 23, 2):
         app.job_queue.run_daily(reminders, time=dtime(hour=hr, tzinfo=UA_TZ))
+
     await set_commands(app)
     print("🤖 Bot running...")
     await app.run_polling()
+
 
 if __name__ == "__main__":
     import nest_asyncio
