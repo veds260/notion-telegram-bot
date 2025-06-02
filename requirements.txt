@@ -1,4 +1,4 @@
-python-telegram-bot==20.0
+python-telegram-bot[job_queue]==20.0
 requests
 python-dotenv
 pytz

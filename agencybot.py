@@ -176,9 +176,7 @@ async def set_commands(app):
     await app.bot.set_my_commands(commands)
 
 async def main():
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-
-    job_queue = app.job_queue  # PTB v20+ handles this automatically
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(lambda app: app.job_queue.start()).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("weektasks", weektasks))
@@ -198,7 +196,7 @@ async def main():
     ))
 
     for hr in range(7, 23, 2):
-        job_queue.run_daily(reminders, time=dtime(hour=hr, tzinfo=UA_TZ))
+        app.job_queue.run_daily(reminders, time=dtime(hour=hr, tzinfo=UA_TZ))
 
     await set_commands(app)
     print("🤖 Bot running...")
