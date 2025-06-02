@@ -10,6 +10,12 @@ from datetime import datetime, timedelta, time as dtime
 import pytz
 import asyncio
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    username = update.effective_chat.username or "No username"
+    await update.message.reply_text(f"Hello {username}! Your chat ID is {chat_id}.")
+    print(f"New user: {username}, chat ID: {chat_id}")
+
 # Load environment
 load_dotenv()
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
@@ -177,6 +183,7 @@ async def set_commands(app):
 
 async def main():
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(lambda app: app.job_queue.start()).build()
+    app.add_handler(CommandHandler("start", start))
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("weektasks", weektasks))
