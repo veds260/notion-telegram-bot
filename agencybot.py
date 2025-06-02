@@ -10,12 +10,6 @@ from datetime import datetime, timedelta, time as dtime
 import pytz
 import asyncio
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    username = update.effective_chat.username or "No username"
-    await update.message.reply_text(f"Hello {username}! Your chat ID is {chat_id}.")
-    print(f"New user: {username}, chat ID: {chat_id}")
-
 # Load environment
 load_dotenv()
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
@@ -26,8 +20,17 @@ NOTION_VERSION = os.getenv("NOTION_VERSION")
 HEADERS = {"Authorization": f"Bearer {NOTION_TOKEN}", "Notion-Version": NOTION_VERSION}
 UA_TZ = pytz.timezone('Europe/Kiev')
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    username = update.effective_chat.username or "No username"
+    await update.message.reply_text(f"Hello {username}! Your chat ID is {chat_id}.")
+    print(f"New user: {username}, chat ID: {chat_id}")
+
+
 user_chat_ids = set()
 (ASK_NAME, ASK_DESC, ASK_DATE, ASK_PRIORITY, ASK_CATEGORY, ASK_MEMBER) = range(6)
+
+
 
 def get_team_member_id(username):
     url = f"https://api.notion.com/v1/databases/{TEAM_DB_ID}/query"
