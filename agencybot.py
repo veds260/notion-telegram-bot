@@ -36,10 +36,15 @@ def get_team_member_id(username):
     url = f"https://api.notion.com/v1/databases/{TEAM_DB_ID}/query"
     res = requests.post(url, headers=HEADERS)
     for r in res.json().get('results', []):
-        uname = r['properties'].get('Telegram Username', {}).get('rich_text', [])
-        if uname and uname[0]['plain_text'].lstrip('@').lower() == username.lower():
-            return r['id']
+        uname_field = r['properties'].get('Telegram Username', {})
+        uname_list = uname_field.get('rich_text') or uname_field.get('title') or uname_field.get('text') or []
+        if uname_list:
+            plain = uname_list[0].get('plain_text', '').lstrip('@').lower()
+            if plain == username.lower():
+                print("DEBUG usernames in Notion DB:", [item['properties']['Telegram Username'] for item in res.json()['results']])
+                return r['id']
     return None
+
 
 def fetch_tasks(start=None, end=None, pending=True):
     url = f"https://api.notion.com/v1/databases/{TASKS_DB_ID}/query"
