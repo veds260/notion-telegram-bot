@@ -10,48 +10,46 @@ from datetime import datetime, timedelta, time as dtime
 import pytz
 import asyncio
 
-# Load environment
+# Load environment variables
 load_dotenv()
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 TASKS_DB_ID = os.getenv("TASKS_DB_ID")
 TEAM_DB_ID = os.getenv("TEAM_DB_ID")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 NOTION_VERSION = os.getenv("NOTION_VERSION")
+
 HEADERS = {"Authorization": f"Bearer {NOTION_TOKEN}", "Notion-Version": NOTION_VERSION}
 UA_TZ = pytz.timezone('Europe/Kiev')
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    username = update.effective_chat.username or "No username"
-    await update.message.reply_text(f"Hello {username}! Your chat ID is {chat_id}.")
-    print(f"New user: {username}, chat ID: {chat_id}")
-
-
 user_chat_ids = set()
 (ASK_NAME, ASK_DESC, ASK_DATE, ASK_PRIORITY, ASK_CATEGORY, ASK_MEMBER) = range(6)
 
+print("DEBUG - Loaded .env variables:")
+print(f"  TASKS_DB_ID: {TASKS_DB_ID}")
+print(f"  TEAM_DB_ID: {TEAM_DB_ID}")
 
 
 def get_team_member_id(username):
+    print("DEBUG - Fetching team members from Notion...")
     url = f"https://api.notion.com/v1/databases/{TEAM_DB_ID}/query"
     res = requests.post(url, headers=HEADERS)
-    
-    print("DEBUG - Looking for username:", username)
+    if res.status_code != 200:
+        print("ERROR - Failed to fetch Team DB:", res.status_code, res.text)
+        return None
 
     for r in res.json().get('results', []):
         uname_field = r['properties'].get('Telegram Username', {})
         uname_list = uname_field.get('rich_text') or uname_field.get('title') or uname_field.get('text') or []
-
         if uname_list:
             plain = uname_list[0].get('plain_text', '').lstrip('@').lower()
             print("DEBUG - Found username in DB:", plain)
             if plain == username.lower():
+                print("DEBUG - Match found for", username)
                 return r['id']
+    print("DEBUG - No match found for", username)
     return None
 
-
-
 def fetch_tasks(start=None, end=None, pending=True):
+    print("DEBUG - Fetching tasks from Notion...")
     url = f"https://api.notion.com/v1/databases/{TASKS_DB_ID}/query"
     filters = []
     if start and end:
@@ -60,6 +58,10 @@ def fetch_tasks(start=None, end=None, pending=True):
         filters.append({"property": "Status", "status": {"does_not_equal": "Done"}})
     payload = {"filter": {"and": filters}} if filters else {}
     res = requests.post(url, headers=HEADERS, json=payload)
+    if res.status_code != 200:
+        print("ERROR - Failed to fetch tasks:", res.status_code, res.text)
+        return []
+    print(f"DEBUG - {len(res.json().get('results', []))} tasks fetched.")
     return res.json().get('results', [])
 
 def mark_task_done(page_id):
@@ -82,6 +84,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     chat_id = update.effective_chat.id
     user_chat_ids.add(chat_id)
+    print(f"DEBUG - /start triggered by @{username} (chat_id: {chat_id})")
     member_id = get_team_member_id(username)
     if not member_id:
         await update.message.reply_text("❌ You are not linked in the Team DB.")
@@ -197,8 +200,6 @@ async def set_commands(app):
 async def main():
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(lambda app: app.job_queue.start()).build()
     app.add_handler(CommandHandler("start", start))
-
-    app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("weektasks", weektasks))
     app.add_handler(CallbackQueryHandler(mark_complete, pattern="^done:"))
 
@@ -221,8 +222,6 @@ async def main():
     await set_commands(app)
     print("🤖 Bot running...")
     await app.run_polling()
-
-
 
 if __name__ == "__main__":
     import nest_asyncio
