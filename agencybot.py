@@ -76,7 +76,7 @@ def format_task(task):
         f"📝 *Description:* {props.get('Description', {}).get('rich_text', [{}])[0].get('plain_text', 'N/A')}\n"
         f"🗓️ *Deadline:* {props.get('Due date', {}).get('date', {}).get('start', 'N/A')}\n"
         f"⚡ *Priority:* {props.get('Priority', {}).get('select', {}).get('name', 'N/A')}\n"
-        f"📂 *Category:* {', '.join([cat['name'] for cat in props.get('Task Category', {}).get('multi_select', [])]) or 'N/A'}\n\n"
+        f"📂 *Category:* {', '.join([cat['name'] for cat in props.get('Task Category/Client', {}).get('multi_select', [])]) or 'N/A'}\n\n"
         f"🚀 Let's get this done! You've got this! 💪"
     )
 
@@ -154,7 +154,7 @@ async def ask_priority(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def ask_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['priority'] = update.message.text
     res = requests.get(f"https://api.notion.com/v1/databases/{TASKS_DB_ID}", headers=HEADERS)
-    categories = res.json()['properties']['Task Category']['multi_select']['options']
+    categories = res.json()['properties']['Task Category/Client']['multi_select']['options']
     buttons = [[InlineKeyboardButton(c['name'], callback_data=f"cat:{c['name']}")] for c in categories]
     await update.message.reply_text("📂 Select task category:", reply_markup=InlineKeyboardMarkup(buttons))
     return ASK_CATEGORY
@@ -181,7 +181,7 @@ async def assign_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Description": {"rich_text": [{"text": {"content": context.user_data['description']}}]},
             "Due date": {"date": {"start": context.user_data['due_date']}},
             "Priority": {"select": {"name": context.user_data['priority']}},
-            "Task Category": {"multi_select": [{"name": context.user_data['category']}]},
+            "Task Category/Client": {"multi_select": [{"name": context.user_data['category']}]},
             "Assigned To ": {"relation": [{"id": member_id}]}
         }
     }
